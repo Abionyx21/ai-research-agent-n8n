@@ -1,0 +1,197 @@
+{
+  "name": "AI Multi-Agent Research Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cbcd987c-0a5d-4213-b4d7-e559a0e5670a",
+      "name": "Start Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4e605dca-f86f-48c2-bb5c-84d656e94e99",
+              "name": "topic",
+              "value": "AI agents in healthcare",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "efa1c538-d194-4dd8-a58f-e38742a24c09",
+      "name": "Topic Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "tinyllama"
+            },
+            {
+              "name": "prompt",
+              "value": "=Extract the top insights from this research: {$json[\"response\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        0
+      ],
+      "id": "29e36bcf-7304-46dc-8e0a-1889dc7aa294",
+      "name": "Insight Extraction"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "tinyllama"
+            },
+            {
+              "name": "prompt",
+              "value": "\"Write a short structured report using these insights:\\n\\n\" + $node[\"HTTP Request1\"].json[\"response\"]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        816,
+        0
+      ],
+      "id": "634617e7-880f-4244-b925-2be485870286",
+      "name": "Report Generator "
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n \"model\": \"tinyllama\",\n \"prompt\": \"Research the topic: {{$json.topic}} and generate key insights.\",\n \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8aad70dc-e93d-4169-a82f-6d6e29e42ab1",
+      "name": "Research Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.data || $json.response || \"\";\n\n// split each streamed JSON line\nconst lines = raw.split(\"\\n\").filter(l => l.trim() !== \"\");\n\nlet text = \"\";\n\nfor (const line of lines) {\n  try {\n    const obj = JSON.parse(line);\n    if (obj.response) {\n      text += obj.response;\n    }\n  } catch (err) {}\n}\n\nreturn [\n  {\n    json: {\n      final_report: text\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "c17ebf76-a7b9-46d0-b38c-c998aa7e353a",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Workflow": {
+      "main": [
+        [
+          {
+            "node": "Topic Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topic Input": {
+      "main": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insight Extraction": {
+      "main": [
+        [
+          {
+            "node": "Report Generator ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Generator ": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Agent": {
+      "main": [
+        [
+          {
+            "node": "Insight Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "274d25b5-4d05-4b80-bbaa-43aaf8f804ef",
+  "meta": {
+    "instanceId": "53e712af7de491a9b77de3c288b43383868b3c4c454827c112451302c39e023d"
+  },
+  "id": "zGkHwJsjBWIdloc7",
+  "tags": []
+}
